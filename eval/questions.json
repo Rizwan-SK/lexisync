@@ -1,0 +1,7 @@
+[
+ {"type":"multihop","q":"Under the GDPR, what is the maximum fine, and which violations trigger the higher fine?","gold":[{"doc":"gdpr.pdf","page":82},{"doc":"gdpr.pdf","page":83}]},
+ {"type":"factual","q":"What is the upper limit of the lower tier of administrative fines under Article 83(4)?","gold":[{"doc":"gdpr.pdf","page":82}]},
+ {"type":"unanswerable","q":"What is the governing law of the subcontractor agreement?","gold":[]},
+ {"type":"unanswerable","q":"What is the penalty for tax evasion under US federal law?","gold":[]},
+ {"type":"unanswerable","q":"What was Alphabet's revenue in 2019?","gold":[]}
+]
