@@ -27,6 +27,9 @@ if "index" in ss:
         st.subheader(f"{badge} {r['confidence']}"); st.write(r["answer"])
         if r.get("explanation"): st.caption(r["explanation"])
         st.caption(f"{r['latency']:.1f}s · tokens {r.get('tokens', '-')}")
+        if r.get("queries") and r["queries"] != [q]: st.caption("Searched for: " + "  |  ".join(r["queries"]))
+        with st.expander(f"Retrieved passages ({len(r['hits'])})"):
+            for c, sc in r["hits"]: st.write(f"{c.doc} · p.{c.page} · {c.clause} · score {sc:.2f}")
         for c in r["citations"]:
             with st.expander(f"{c['doc']} · p.{c['page']} · {c['clause']}"):
                 left, right = st.columns(2)
