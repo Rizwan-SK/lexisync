@@ -1,16 +1,91 @@
-# LexiSyncAI
-Evidence-grounded legal analyst: clause-aware ingestion → BM25+dense hybrid → cross-encoder rerank → cited answer → two-gate abstention.
+# LexiSyncAI – evidence-grounded legal document analyst
 
-## Run
-`make install && export ANTHROPIC_API_KEY=... && make run` · eval: `make eval` (arg: PDF dir) · `make test`
+Ask questions about 2–5 public legal PDFs and get a plain-language answer with **page + clause citations**,
+a confidence badge, the cited page shown side by side, and **abstention** when the documents lack the evidence.
 
-## Architecture (draw this as your one-page diagram)
-PDF → PyMuPDF (reading order, header/footer strip, scanned flag) → clause-aware chunks → {BM25, bge-small} → RRF → MiniLM cross-encoder → [Gate 1: CE score < threshold ⇒ abstain] → LLM (JSON, cites doc/page/clause) → [Gate 2: insufficient flag] → UI (badge, side-by-side page image).
+## Architecture
+```mermaid
+flowchart LR
+  A[PDF upload] --> B[Ingestion: PyMuPDF, reading order,<br/>header/footer strip, scanned-page flag]
+  B --> C[Clause-aware chunks<br/>doc / page / clause]
+  C --> D1[BM25]
+  C --> D2[Dense: bge-small]
+  Q[Question] --> P[Planner: Haiku corrects spelling,<br/>splits multi-part questions]
+  P --> D1
+  P --> D2
+  D1 --> F[RRF fusion]
+  D2 --> F
+  F --> R[Cross-encoder rerank]
+  R --> G1{Gate 1:<br/>rerank score low?}
+  G1 -- yes --> X[ABSTAIN + list documents searched]
+  G1 -- no --> L[Sonnet: answer ONLY from sources,<br/>JSON with page + clause citations]
+  L --> G2{Gate 2: model says<br/>insufficient?}
+  G2 -- yes --> X
+  G2 -- no --> U[UI: answer, badge, cited page image,<br/>retrieved passages]
+```
 
-## 3-day plan
-**Day 1 (Mon 9):** install, get 2–3 PDFs (GDPR from EUR-Lex + a SEC/gov.uk doc), run ingestion, inspect chunks. Commit often.
-**Day 2 (Tue 10):** write ≥15 questions in eval/questions.json (≥3 unanswerable, ≥3 two-page multi-hop; fill real gold pages). Run `make eval`, tune ABSTAIN_CE. Do the mandatory comparison (dense vs hybrid, or no-retrieval vs retrieval).
-**Day 3 (Wed 11):** UI polish, README/diagram, rehearse 5-min demo on an *unseen* PDF. Bonus if time: #11 latency/cost (already logged), #5 verifier loop, #10 Streamlit Cloud deploy.
+## Setup (Windows PowerShell, Python 3.12 via conda)
+```
+conda create -n lexisync python=3.12 -y
+conda activate lexisync
+pip install -r requirements.txt
+$env:ANTHROPIC_API_KEY = "<your key>"        # never commit it
+python -m streamlit run src/app.py --server.fileWatcherType none
+```
+Optional env vars: `LLM_MODEL` (answer model, default claude-sonnet-5-5), `SPLIT_MODEL` (planner, default claude-haiku-5-5),
+`DECOMPOSE=0` (disable the planner), `ABSTAIN_CE` (rerank-score abstention threshold, default -10).
+Shortcuts: `make install | run | eval | test` (`make` is optional). Models download on first run.
 
-## Known gaps (TODO)
-OCR, table extraction, bbox citations, verifier loop, Dockerfile.
+## Data (not committed)
+Put PDFs in `data/`. The evaluation uses `data_core/`: `gdpr.pdf` (Regulation (EU) 2016/679,
+https://eur-lex.europa.eu/eli/reg/2016/679/oj) and `google.pdf` (Alphabet Inc. notes pricing term sheet, SEC EDGAR; TODO: add exact link).
+
+## Evaluation (17 held-out questions: 8 factual, 5 multi-hop, 4 unanswerable)
+`python eval/run_eval.py data_core` prints the recall table and writes `eval/results.csv`. Gold answers are phrases that must appear
+on the cited page; recall = share of gold "hops" whose page appears in the top-k.
+
+**Retrieval recall@k (13 answerable questions)**
+
+| Config | k=3 | k=5 | k=10 |
+|---|---|---|---|
+| BM25 | 0.62 | 0.73 | 0.88 |
+| Dense | 0.88 | 0.92 | 0.92 |
+| Hybrid (RRF) | 0.77 | 0.85 | 0.92 |
+| Hybrid + cross-encoder | 0.85 | 0.85 | 0.92 |
+
+Dense retrieval is a strong baseline on this small corpus; hybrid catches up at k=10; BM25 alone is weakest because the questions
+are natural language, not clause numbers. The general-purpose cross-encoder improves hybrid's top ranks but does not beat dense.
+
+**End-to-end ablation (planner)**
+
+| Config | Abstention acc. | False abstentions | Citation precision (strict) | Mean latency |
+|---|---|---|---|---|
+| No planner | 4/4 | 3/13 | 0.81 | 4.4 s |
+| Planner v1 (Sonnet splits multi-part questions) | 4/4 | 0/13 | 0.79 | 6.6 s |
+| Planner v2 (Haiku splitter, stricter split + citation prompts) | 4/4 | 1/13 | 0.88 | 5.6 s |
+| Planner v3 (LLM query rewrite, 8 chunks) | 4/4 | 1/13 | 0.91 | 6.1 s |
+| Planner v4 (conservative rewrite, original-wording slot, concise refusals) | 4/4 | 1/13 | 0.90 | 5.7 s |
+
+Raw per-question results: `eval/results_*.csv`. Without the planner, all 3 false abstentions were two-part questions matched as one
+query. Switching the splitter to Haiku cut latency by 1.0 s vs v1. v3 adds query rewriting and 8-chunk retrieval; v4 restricts the rewrite
+to spelling and legal terminology after a misspelled question drifted away from the document's own words ("co-managers" became
+"underwriting syndicate"). The clean 17-question set does not measure v3/v4; they were checked on misspelled queries in the app.
+Single runs, n=17: differences of one question are within noise; v1→v2 changed two things at once.
+
+Answer correctness (manual, `correct_manual` column of `eval/results_decompose_v4.csv`): TODO fill in yes / partial / no counts.
+Citation precision is strict page-level against the gold phrase, so relevant extra pages (e.g. related recitals) count as errors.
+
+## Failure analysis
+- **DPIA + fine** (remaining false abstention): Art. 83(4) refers to "Articles 25 to 39" and never names Art. 35, so retrieval misses the fine clause. The system refused instead of guessing.
+- **Near-duplicate documents**: when two copies of the same regulation were indexed, duplicate chunks filled retrieval slots and pushed Art. 83(4)/(5) out of the top results; with distinct documents the same question is answered correctly. Retrieving a few chunks per document would address this.
+- **Query-rewrite drift**: an unconstrained rewrite replaced "co-managers" with a synonym absent from the document and missed the passage; fixed in v4.
+- **Recital labels**: some recital chunks carry the wrong recital number (known ingestion limitation).
+- Scanned pages are flagged but not OCR'd; tables are not specially extracted.
+
+## Extended features
+Query planner (spelling correction, decomposition of multi-part questions), planner ablation, latency/token report (UI + CSV),
+splitter-model optimisation (Sonnet → Haiku, measured above), retrieved-passages panel in the UI.
+
+## Layout
+`src/ingest.py` ingestion + clause-aware chunking · `src/retrieve.py` hybrid retrieval · `src/answer.py` planner, generation, abstention ·
+`src/app.py` Streamlit UI · `eval/` questions, harness, results · `find.py` locate text/pages in PDFs · `tests/` unit tests (`make test`)
