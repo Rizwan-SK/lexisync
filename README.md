@@ -1,4 +1,4 @@
-# LexiSyncAI – evidence-grounded legal document analyst
+﻿# LexiSyncAI – evidence-grounded legal document analyst
 
 Ask questions about 2–5 public legal PDFs and get a plain-language answer with **page + clause citations**,
 a confidence badge, the cited page shown side by side, and **abstention** when the documents lack the evidence.
@@ -48,13 +48,12 @@ on the cited page; recall = share of gold "hops" whose page appears in the top-k
 
 | Config | k=3 | k=5 | k=10 |
 |---|---|---|---|
-| BM25 | 0.62 | 0.73 | 0.88 |
-| Dense | 0.88 | 0.92 | 0.92 |
-| Hybrid (RRF) | 0.77 | 0.85 | 0.92 |
+| BM25 | 0.65 | 0.77 | 0.88 |
+| Dense | 0.92 | 0.92 | 0.92 |
+| Hybrid (RRF) | 0.77 | 0.92 | 0.92 |
 | Hybrid + cross-encoder | 0.85 | 0.85 | 0.92 |
 
-Dense retrieval is a strong baseline on this small corpus; hybrid catches up at k=10; BM25 alone is weakest because the questions
-are natural language, not clause numbers. The general-purpose cross-encoder improves hybrid's top ranks but does not beat dense.
+Dense retrieval is the strongest at k=3 (0.92); plain hybrid (RRF) matches it from k=5; and all dense and hybrid variants converge at 0.92 at k=10. BM25 alone is weakest because the questions are natural language, not clause numbers. The general-purpose cross-encoder lifts hybrid at k=3 (0.77 to 0.85) but trails plain hybrid at k=5 (0.85 vs 0.92), which fits a reranker trained on web search rather than legal text. With 13 answerable questions, a 0.04 gap equals half of one gold hop, so treat small differences as noise.
 
 **End-to-end ablation (planner)**
 
@@ -89,3 +88,4 @@ splitter-model optimisation (Sonnet → Haiku, measured above), retrieved-passag
 ## Layout
 `src/ingest.py` ingestion + clause-aware chunking · `src/retrieve.py` hybrid retrieval · `src/answer.py` planner, generation, abstention ·
 `src/app.py` Streamlit UI · `eval/` questions, harness, results · `find.py` locate text/pages in PDFs · `tests/` unit tests (`make test`)
+
