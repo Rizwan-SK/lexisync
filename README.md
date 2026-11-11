@@ -1,4 +1,4 @@
-# LexiSyncAI – evidence-grounded legal document analyst
+﻿# LexiSyncAI – evidence-grounded legal document analyst
 
 Upload 2–5 public legal PDFs, ask a question, and get a plain-language answer where **every claim cites a page and clause**.
 The app shows the cited passage next to the rendered PDF page, a confidence badge, and **refuses to answer** when the documents
@@ -138,4 +138,5 @@ Raw per-question results for every version are in `eval/results\_\*.csv`.
 ## Layout
 
 `src/ingest.py` · `src/retrieve.py` · `src/answer.py` (planner, generation, abstention) · `src/app.py` (Streamlit UI) · `eval/` (questions, harness, results) · `find.py` (locate text and pages in PDFs) · `tests/` · `requirements.txt` · `Makefile`
+
 
