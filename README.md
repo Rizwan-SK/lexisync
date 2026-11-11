@@ -63,7 +63,7 @@ Mac/Linux: identical, except `export ANTHROPIC\_API\_KEY="your-key-here"` in ste
 
 ## How it works
 
-!\[LexiSyncAI architecture](docs/architecture.svg)
+!\[LexiSyncAI architecture](docs/architecture.png)
 
 * **Ingestion** (`src/ingest.py`): reads each page in column-aware order, strips headers/footers, flags image-only pages, and splits text at clause boundaries
 (`Article 83 (4)`, `Recital 86`, contract clauses like `7.2`, ALL-CAPS headings, else `p.N`), never mid-clause unless a clause exceeds 1,200 characters. Every chunk keeps its own document, page and clause.
