@@ -1,4 +1,4 @@
-﻿# LexiSyncAI – evidence-grounded legal document analyst
+# LexiSyncAI – evidence-grounded legal document analyst
 
 Upload 2–5 public legal PDFs, ask a question, and get a plain-language answer where **every claim cites a page and clause**.
 The app shows the cited passage next to the rendered PDF page, a confidence badge, and **refuses to answer** when the documents
@@ -63,7 +63,7 @@ Mac/Linux: identical, except `export ANTHROPIC\_API\_KEY="your-key-here"` in ste
 
 ## How it works
 
-!\[LexiSyncAI architecture](docs/architecture.png)
+<img width="1480" height="570" alt="architecture" src="https://github.com/user-attachments/assets/c8cf72cd-3bf0-41ec-9111-87053a35319c" />
 
 * **Ingestion** (`src/ingest.py`): reads each page in column-aware order, strips headers/footers, flags image-only pages, and splits text at clause boundaries
 (`Article 83 (4)`, `Recital 86`, contract clauses like `7.2`, ALL-CAPS headings, else `p.N`), never mid-clause unless a clause exceeds 1,200 characters. Every chunk keeps its own document, page and clause.
