@@ -1,5 +1,4 @@
 import sys, types; sys.path.insert(0, "src")
-sys.modules.setdefault("fitz", types.ModuleType("fitz"))
 import ingest
 
 def test_patterns():
@@ -20,3 +19,13 @@ def test_number_on_own_line(monkeypatch):
     monkeypatch.setattr(ingest, "read_pages", lambda p: pages)
     chunks, _ = ingest.chunk_doc("x.pdf", "x.pdf")
     assert [c.clause for c in chunks] == ["Article 83", "Article 83 (5)", "Article 83 (7)"]
+
+
+def test_bottom_of_page_text_is_kept(tmp_path):
+    import fitz   # regression: Art. 8(1) 2nd subparagraph ended at 94.5% of page height and was dropped as a footer
+    d = fitz.open(); p = d.new_page()
+    p.insert_textbox(fitz.Rect(60, 400, 500, 430), "Body paragraph in the middle of the page.", fontsize=10)
+    p.insert_textbox(fitz.Rect(60, 783, 500, 812), "Member States may provide by law for a lower age.", fontsize=10)
+    d.save(tmp_path / "t.pdf")
+    text = ingest.read_pages(str(tmp_path / "t.pdf"))[0][1]
+    assert "lower age" in text and "Body paragraph" in text

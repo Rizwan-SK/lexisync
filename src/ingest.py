@@ -18,7 +18,7 @@ def read_pages(path):
     with fitz.open(path) as d:
         for i, p in enumerate(d, 1):
             w, h = p.rect.width, p.rect.height
-            bl = [b for b in p.get_text("blocks") if b[6] == 0 and h*.06 < b[1] and b[3] < h*.94]
+            bl = [b for b in p.get_text("blocks") if b[6] == 0 and h*.06 < b[1] and b[3] < h*.97]
             nl = sum(b[2] < w*.5 for b in bl); nr = sum(b[0] > w*.5 for b in bl)
             col = (lambda b: int(b[0] > w*.5)) if min(nl, nr) >= 3 else (lambda b: 0)  # 2 columns only if both halves are populated
             bl.sort(key=lambda b: (col(b), b[1], b[0]))
