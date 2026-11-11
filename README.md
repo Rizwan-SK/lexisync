@@ -26,7 +26,7 @@ pip install -r requirements.txt
 **3. Set your API key** (once per terminal window; never commit it)
 
 ```
-$env:ANTHROPIC\\\\\\\_API\\\\\\\_KEY = "your-key-here"
+$env:ANTHROPIC\_API\_KEY = "your-key-here"
 ```
 
 **4. Start the app**
@@ -44,44 +44,26 @@ Try these three on `gdpr.pdf`:
 * *Prose:* "Within what time must a controller notify a personal data breach?" → 72 hours, Art. 33(1).
 * *Unanswerable:* "What is the governing law of the subcontractor agreement?" → red INSUFFICIENT EVIDENCE badge, no citations.
 
-Mac/Linux: identical, except `export ANTHROPIC\\\\\\\_API\\\\\\\_KEY="your-key-here"` in step 3.
+Mac/Linux: identical, except `export ANTHROPIC\_API\_KEY="your-key-here"` in step 3.
 
-**Run the tests:** `python -m pytest -q`  ·  **Run the evaluation:** put `gdpr.pdf` and `google.pdf` in a folder `data\\\\\\\_core/`, then `python eval/run\\\\\\\_eval.py data\\\\\\\_core` (calls the API; prints the recall table, writes `eval/results.csv`).
+**Run the tests:** `python -m pytest -q`  ·  **Run the evaluation:** put `gdpr.pdf` and `google.pdf` in a folder `data\_core/`, then `python eval/run\_eval.py data\_core` (calls the API; prints the recall table, writes `eval/results.csv`).
 `make install | run | eval | test` are shortcuts for the same commands (`make` is optional).
 
 **Settings (optional environment variables)**
 
 |Variable|Default|Meaning|
 |-|-|-|
-|`LLM\\\\\\\_MODEL`|`claude-sonnet-5-5`|model that writes the cited answer|
-|`SPLIT\\\\\\\_MODEL`|`claude-haiku-5-5`|smaller model for the query planner|
+|`LLM\_MODEL`|`claude-sonnet-5-5`|model that writes the cited answer|
+|`SPLIT\_MODEL`|`claude-haiku-5-5`|smaller model for the query planner|
 |`DECOMPOSE`|`1`|`0` switches the planner off (used for the ablation)|
-|`ABSTAIN\\\\\\\_CE`|`-10`|rerank-score threshold for the first abstention gate|
+|`ABSTAIN\_CE`|`-10`|rerank-score threshold for the first abstention gate|
 
 **Troubleshooting:** "Application Control policy blocked streamlit.exe" → always start with `python -m streamlit` as above ·
 `ModuleNotFoundError` → run `conda activate lexisync` and reinstall requirements · everything abstains or errors → check the API key and credit.
 
 ## How it works
 
-```mermaid
-flowchart LR
-  A\\\\\\\[PDF upload] --> B\\\\\\\[Ingestion: PyMuPDF, reading order,<br/>header/footer strip, scanned-page flag]
-  B --> C\\\\\\\[Clause-aware chunks<br/>doc / page / clause]
-  C --> D1\\\\\\\[BM25]
-  C --> D2\\\\\\\[Dense: bge-small]
-  Q\\\\\\\[Question] --> P\\\\\\\[Planner: Haiku corrects spelling,<br/>splits multi-part questions]
-  P --> D1
-  P --> D2
-  D1 --> F\\\\\\\[RRF fusion]
-  D2 --> F
-  F --> R\\\\\\\[Cross-encoder rerank]
-  R --> G1{Gate 1:<br/>rerank score low?}
-  G1 -- yes --> X\\\\\\\[ABSTAIN + list documents searched]
-  G1 -- no --> L\\\\\\\[Sonnet: answer ONLY from sources,<br/>JSON with page + clause citations]
-  L --> G2{Gate 2: model says<br/>insufficient?}
-  G2 -- yes --> X
-  G2 -- no --> U\\\\\\\[UI: answer, badge, cited page image,<br/>retrieved passages]
-```
+!\[LexiSyncAI architecture](docs/architecture.svg)
 
 * **Ingestion** (`src/ingest.py`): reads each page in column-aware order, strips headers/footers, flags image-only pages, and splits text at clause boundaries
 (`Article 83 (4)`, `Recital 86`, contract clauses like `7.2`, ALL-CAPS headings, else `p.N`), never mid-clause unless a clause exceeds 1,200 characters. Every chunk keeps its own document, page and clause.
@@ -94,7 +76,7 @@ flowchart LR
 |Assignment requirement|Where|
 |-|-|
 |Ingestion, reading order, scanned-page flag, clause-aware chunking|`src/ingest.py`, `tests/`|
-|Hybrid retrieval + cross-encoder rerank, recall@k per configuration|`src/retrieve.py`, `eval/run\\\\\\\_eval.py`|
+|Hybrid retrieval + cross-encoder rerank, recall@k per configuration|`src/retrieve.py`, `eval/run\_eval.py`|
 |Cited generative answer, answers only from context, cited page shown|`src/answer.py`, `src/app.py`|
 |Abstention, accuracy on unanswerable questions|two gates; 4/4 below|
 |≥15 questions (factual, multi-hop, ≥3 unanswerable), correctness, citation precision, latency, mandatory comparison|17 questions; dense-only vs hybrid vs hybrid+rerank (below)|
@@ -102,8 +84,8 @@ flowchart LR
 
 ## Data (not committed)
 
-`data\\\\\\\_core/` holds the two evaluation documents: `gdpr.pdf` (Regulation (EU) 2016/679, https://eur-lex.europa.eu/eli/reg/2016/679/oj)
-and `google.pdf` (Alphabet Inc. notes pricing term sheet, SEC EDGAR https://www.sec.gov/Archives/edgar/data/1652044/000119312526443857/d134038dfwp.htm). PDFs are git-ignored.
+`data\_core/` holds the two evaluation documents: `gdpr.pdf` (Regulation (EU) 2016/679, https://eur-lex.europa.eu/eli/reg/2016/679/oj)
+and `google.pdf` (Alphabet Inc. notes pricing term sheet, SEC EDGARhttps://www.sec.gov/Archives/edgar/data/1652044/000119312526443857/d134038dfwp.htm). PDFs are git-ignored.
 
 ## Evaluation
 
@@ -141,10 +123,10 @@ A 0.04 gap is half of one gold hop, so small differences are noise.
 * v6 made the consent-age answer complete (Art. 8(1) allows Member States to lower the age to 13). Precision moved 0.92 → 0.90 because one answer now also cites a correct page that is not in the gold set.
 * v3/v4 target misspelled or vague questions, which the clean question set does not measure; they were verified on such queries in the app.
 
-**Answer correctness (manual, by the author, v6, `eval/results\\\\\\\_decompose\\\\\\\_v6.csv`): 16 correct, 1 partial, 0 incorrect of 17.**
+**Answer correctness (manual, by the author, v6, `eval/results\_decompose\_v6.csv`): 16 correct, 1 partial, 0 incorrect of 17.**
 The partial is the DPIA + fine question (the model answered the DPIA half and reported that the retrieved sources held no Art. 83(4) text). All 4 unanswerable questions were refused with no citations.
 Citation precision is strict page-level against the gold phrase, so a relevant extra page counts as an error. Each version was run once; n=17, so one question is about 6 points.
-Raw per-question results for every version are in `eval/results\\\\\\\_\\\\\\\*.csv`.
+Raw per-question results for every version are in `eval/results\_\*.csv`.
 
 ## Findings and limitations
 
